@@ -22,21 +22,42 @@
 
 package com.raywenderlich.android.whysoserious.firebase.authentication
 
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 import javax.inject.Inject
 
-class FirebaseAuthenticationManager @Inject constructor() : FirebaseAuthenticationInterface {
+class FirebaseAuthenticationManager
+@Inject constructor(private val authentication: FirebaseAuth) : FirebaseAuthenticationInterface {
 
   override fun login(email: String, password: String, onResult: (Boolean) -> Unit) {
+    authentication.signInWithEmailAndPassword(email,password)
+      .addOnCompleteListener {
+        onResult(it.isComplete && it.isSuccessful)
+      }
   }
 
   override fun register(email: String, password: String, userName: String, onResult: (Boolean) -> Unit) {
+    authentication.createUserWithEmailAndPassword(email, password)
+      .addOnCompleteListener {
+        if (it.isComplete && it.isSuccessful) {
+          val user = UserProfileChangeRequest.Builder()
+            .setDisplayName(userName)
+            .build()
+          authentication.currentUser?.updateProfile(user)
 
+          onResult(true)
+        } else {
+          onResult(false)
+        }
+      }
   }
 
-  override fun getUserId(): String = ""
+  override fun getUserId(): String = authentication.currentUser?.uid ?: ""
 
-  override fun getUserName(): String = ""
+  override fun getUserName(): String = authentication.currentUser?.displayName ?: ""
 
   override fun logOut(onResult: () -> Unit) {
+    authentication.signOut()
+    onResult()
   }
 }
